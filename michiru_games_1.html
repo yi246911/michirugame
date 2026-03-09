@@ -1,0 +1,1537 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>みちるちゃんのゲームランド！</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&family=Kaisei+Decol:wght@700&display=swap');
+
+:root {
+  --pink: #ff7eb3;
+  --yellow: #ffe066;
+  --mint: #6ee7b7;
+  --blue: #7ec8f7;
+  --orange: #ffb347;
+  --purple: #c4b5fd;
+  --bg: #fff8f0;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+body {
+  font-family: 'Mochiy Pop One', sans-serif;
+  background: var(--bg);
+  overflow: hidden;
+  height: 100vh; width: 100vw;
+  user-select: none;
+}
+
+/* ========== SCREENS ========== */
+.screen { position:fixed; inset:0; display:none; }
+.screen.active { display:flex; }
+
+/* ========== MENU ========== */
+#menu {
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 20px;
+  background:
+    radial-gradient(circle at 10% 20%, #ffe4f0 0%, transparent 40%),
+    radial-gradient(circle at 90% 80%, #d4f5e9 0%, transparent 40%),
+    radial-gradient(circle at 50% 50%, #fff8f0 0%, #ffecd2 100%);
+  overflow-y: auto;
+}
+
+#menu-title {
+  text-align: center;
+  margin-bottom: 16px;
+}
+#menu-title .sub {
+  font-size: clamp(0.9rem, 3vw, 1.2rem);
+  color: #888;
+  display: block;
+  margin-bottom: 4px;
+}
+#menu-title h1 {
+  font-family: 'Kaisei Decol', serif;
+  font-size: clamp(1.8rem, 7vw, 3.2rem);
+  background: linear-gradient(135deg, #ff7eb3, #ffb347, #6ee7b7, #7ec8f7);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+  line-height: 1.2;
+}
+
+.game-cards {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  padding: 0 16px 24px;
+  width: 100%;
+  max-width: 600px;
+}
+
+.game-card {
+  background: white;
+  border-radius: 28px;
+  padding: 20px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+  border: 4px solid transparent;
+  transition: transform 0.15s, box-shadow 0.15s;
+  position: relative;
+  overflow: hidden;
+}
+.game-card::before {
+  content: '';
+  position: absolute; inset: 0;
+  opacity: 0.12;
+  border-radius: 24px;
+}
+.game-card[data-game="animal"]  { border-color: #ffb347; }
+.game-card[data-game="animal"]::before  { background: #ffb347; }
+.game-card[data-game="color"]   { border-color: #ff7eb3; }
+.game-card[data-game="color"]::before   { background: #ff7eb3; }
+.game-card[data-game="count"]   { border-color: #6ee7b7; }
+.game-card[data-game="count"]::before   { background: #6ee7b7; }
+.game-card[data-game="bubble"]  { border-color: #7ec8f7; }
+.game-card[data-game="bubble"]::before  { background: #7ec8f7; }
+
+.game-card:active { transform: scale(0.93); }
+.card-emoji { font-size: clamp(2.8rem, 12vw, 4.5rem); line-height:1; }
+.card-title { font-size: clamp(1rem, 4vw, 1.4rem); color: #333; text-align:center; }
+.card-desc  { font-size: clamp(0.65rem, 2.5vw, 0.85rem); color: #888; text-align:center; line-height:1.4; }
+
+.floating { animation: float 3s ease-in-out infinite; }
+@keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+
+/* ========== COMMON GAME UI ========== */
+#top-bar {
+  position: fixed; top:0; left:0; right:0; z-index:200;
+  display: flex; align-items:center; justify-content:space-between;
+  padding: 10px 16px;
+  background: rgba(255,255,255,0.85);
+  backdrop-filter: blur(10px);
+  border-bottom: 3px dashed var(--orange);
+}
+#back-btn {
+  font-family: 'Mochiy Pop One', sans-serif;
+  font-size: clamp(0.9rem, 3vw, 1.1rem);
+  background: var(--yellow);
+  border: none; border-radius: 40px;
+  padding: 6px 16px; cursor:pointer;
+  color: #333;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+}
+#game-score { font-size: clamp(1rem, 4vw, 1.5rem); color: #e65100; }
+#game-level { font-size: clamp(0.85rem, 3vw, 1.1rem); color: #6a1b9a; }
+
+#target-bar {
+  position: fixed; top:58px; left:0; right:0; z-index:190;
+  text-align:center; padding: 6px;
+}
+#target-label {
+  font-size: clamp(1.1rem, 4.5vw, 1.9rem);
+  color: #1a237e;
+  background: rgba(255,255,255,0.9);
+  display: inline-block;
+  padding: 6px 20px;
+  border-radius: 40px;
+  border: 3px solid #5c6bc0;
+  animation: pulse 1.5s infinite;
+}
+@keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.05)} }
+
+#play-area {
+  position: fixed;
+  top: 120px; left:0; right:0; bottom:0;
+  overflow: hidden;
+  pointer-events: auto;
+}
+
+/* ========== ANIMAL GAME ========== */
+.animal-btn {
+  position: absolute;
+  border: none; border-radius: 50%;
+  cursor: pointer;
+  display: flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+  animation: float 3s ease-in-out infinite;
+  transition: transform 0.1s;
+}
+.animal-btn:active { transform: scale(0.82) !important; }
+.animal-btn .lbl { font-size: 0.7em; color:#444; margin-top:2px; line-height:1; }
+
+/* ========== COLOR GAME ========== */
+#color-game-area {
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  height:100%; gap: 20px; padding: 10px;
+}
+.color-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  width: 100%; max-width: 420px;
+}
+.color-btn {
+  aspect-ratio: 1;
+  border-radius: 24px;
+  border: none;
+  cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Mochiy Pop One',sans-serif;
+  font-size: clamp(1rem, 4vw, 1.5rem);
+  color: white;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.18);
+  transition: transform 0.1s;
+  animation: float 3s ease-in-out infinite;
+}
+.color-btn:active { transform: scale(0.88) !important; }
+
+/* ========== COUNT GAME ========== */
+#count-game-area {
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  height:100%; gap:16px; padding:10px;
+}
+.count-emoji-area {
+  font-size: clamp(2.2rem, 9vw, 4rem);
+  line-height:1.3; text-align:center;
+  max-width: 95vw; word-break:break-all;
+  background: rgba(255,255,255,0.8);
+  border-radius: 24px;
+  padding: 14px 18px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+}
+.count-choices {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px; width:100%; max-width:360px;
+}
+.count-btn {
+  font-family:'Mochiy Pop One',sans-serif;
+  font-size: clamp(1.6rem, 7vw, 2.5rem);
+  background: white;
+  border: 4px solid var(--mint);
+  border-radius: 20px;
+  padding: 12px 0;
+  cursor:pointer;
+  color: #2d6a4f;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  transition: transform 0.1s;
+}
+.count-btn:active { transform: scale(0.88) !important; }
+
+.game-card[data-game="hiragana"] { border-color: #f06292; }
+.game-card[data-game="hiragana"]::before { background: #f06292; }
+.game-card[data-game="hiragana"] .card-emoji {
+  font-family: 'Kaisei Decol', serif;
+  font-size: clamp(2.4rem, 10vw, 4rem);
+  color: #c2185b; line-height: 1;
+}
+.game-card[data-game="katakana"] { border-color: #26a69a; }
+.game-card[data-game="katakana"]::before { background: #26a69a; }
+.game-card[data-game="katakana"] .card-emoji {
+  font-family: 'Kaisei Decol', serif;
+  font-size: clamp(2.4rem, 10vw, 4rem);
+  color: #00695c; line-height: 1;
+}
+.game-card[data-game="alphabet"] { border-color: #5c6bc0; }
+.game-card[data-game="alphabet"]::before { background: #5c6bc0; }
+.game-card[data-game="alphabet"] .card-emoji {
+  font-family: 'Kaisei Decol', serif;
+  font-size: clamp(2.4rem, 10vw, 4rem);
+  color: #283593; line-height: 1;
+}
+.game-card[data-game="flag"] { border-color: #ef6c00; }
+.game-card[data-game="flag"]::before { background: #ef6c00; }
+
+/* ========== FLAG GAME ========== */
+#flag-game-area {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  height: 100%; gap: 18px; padding: 10px;
+}
+.flag-choices {
+  display: grid;
+  gap: 14px;
+  width: 100%; max-width: 500px;
+}
+.flag-btn {
+  background: white;
+  border: 4px solid #ffcc80;
+  border-radius: 20px;
+  padding: 10px 8px;
+  cursor: pointer;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 4px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.1);
+  transition: transform 0.1s;
+  animation: float 3s ease-in-out infinite;
+}
+.flag-btn:active { transform: scale(0.85) !important; }
+.flag-emoji { font-size: clamp(2.2rem, 10vw, 3.5rem); line-height: 1; }
+.flag-name  {
+  font-family: 'Mochiy Pop One', sans-serif;
+  font-size: clamp(0.65rem, 2.5vw, 0.9rem);
+  color: #555; line-height: 1;
+}
+
+/* ========== HIRAGANA GAME ========== */
+#hiragana-game-area {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  height: 100%; gap: 20px; padding: 10px;
+}
+.hiragana-display {
+  font-family: 'Kaisei Decol', serif;
+  font-size: clamp(5rem, 22vw, 10rem);
+  color: #880e4f;
+  background: rgba(255,255,255,0.92);
+  border-radius: 28px;
+  padding: 10px 32px;
+  box-shadow: 0 6px 24px rgba(240,98,146,0.2);
+  border: 4px solid #f48fb1;
+  line-height: 1.1;
+  animation: pulse 1.8s infinite;
+}
+.hiragana-grid {
+  display: grid;
+  gap: 12px;
+  width: 100%; max-width: 460px;
+}
+.hiragana-btn {
+  font-family: 'Kaisei Decol', serif;
+  font-size: clamp(1.8rem, 8vw, 3rem);
+  background: white;
+  border: 4px solid #f48fb1;
+  border-radius: 20px;
+  padding: 10px 4px;
+  cursor: pointer;
+  color: #880e4f;
+  box-shadow: 0 4px 14px rgba(240,98,146,0.15);
+  transition: transform 0.1s;
+  animation: float 3s ease-in-out infinite;
+}
+.hiragana-btn:active { transform: scale(0.85) !important; }
+
+/* ========== KATAKANA GAME ========== */
+#katakana-game-area {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  height: 100%; gap: 20px; padding: 10px;
+}
+.katakana-display {
+  font-family: 'Kaisei Decol', serif;
+  font-size: clamp(5rem, 22vw, 10rem);
+  color: #00695c;
+  background: rgba(255,255,255,0.92);
+  border-radius: 28px;
+  padding: 10px 32px;
+  box-shadow: 0 6px 24px rgba(38,166,154,0.2);
+  border: 4px solid #80cbc4;
+  line-height: 1.1;
+  animation: pulse 1.8s infinite;
+}
+.katakana-grid { display: grid; gap: 12px; width: 100%; max-width: 460px; }
+.katakana-btn {
+  font-family: 'Kaisei Decol', serif;
+  font-size: clamp(1.8rem, 8vw, 3rem);
+  background: white;
+  border: 4px solid #80cbc4;
+  border-radius: 20px;
+  padding: 10px 4px;
+  cursor: pointer;
+  color: #00695c;
+  box-shadow: 0 4px 14px rgba(38,166,154,0.15);
+  transition: transform 0.1s;
+  animation: float 3s ease-in-out infinite;
+}
+.katakana-btn:active { transform: scale(0.85) !important; }
+
+/* ========== ALPHABET GAME ========== */
+#alphabet-game-area {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  height: 100%; gap: 20px; padding: 10px;
+}
+.alphabet-display {
+  font-family: 'Kaisei Decol', serif;
+  font-size: clamp(5rem, 22vw, 10rem);
+  color: #283593;
+  background: rgba(255,255,255,0.92);
+  border-radius: 28px;
+  padding: 10px 32px;
+  box-shadow: 0 6px 24px rgba(92,107,192,0.2);
+  border: 4px solid #9fa8da;
+  line-height: 1.1;
+  animation: pulse 1.8s infinite;
+}
+.alphabet-grid { display: grid; gap: 12px; width: 100%; max-width: 460px; }
+.alphabet-btn {
+  font-family: 'Kaisei Decol', serif;
+  font-size: clamp(1.8rem, 8vw, 3rem);
+  background: white;
+  border: 4px solid #9fa8da;
+  border-radius: 20px;
+  padding: 10px 4px;
+  cursor: pointer;
+  color: #283593;
+  box-shadow: 0 4px 14px rgba(92,107,192,0.15);
+  transition: transform 0.1s;
+  animation: float 3s ease-in-out infinite;
+}
+.alphabet-btn:active { transform: scale(0.85) !important; }
+
+.game-card[data-game="memory"] { border-color: #ab47bc; }
+.game-card[data-game="memory"]::before { background: #ab47bc; }
+
+/* ========== MEMORY GAME ========== */
+#memory-game-area {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  height: 100%; gap: 8px; padding: 8px;
+  box-sizing: border-box;
+}
+.memory-info {
+  font-size: clamp(0.9rem, 3.5vw, 1.2rem);
+  color: #6a1b9a;
+  background: rgba(255,255,255,0.85);
+  padding: 4px 18px; border-radius: 30px;
+  flex-shrink: 0;
+}
+.memory-grid {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  max-width: min(500px, 98vw);
+  flex: 1;
+  align-content: center;
+}
+.mem-card {
+  aspect-ratio: 1;
+  border-radius: 16px;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  transition: transform 0.15s;
+  position: relative;
+  transform-style: preserve-3d;
+  background: none;
+  padding: 0;
+  min-height: 0;
+}
+.mem-card-inner {
+  width: 100%; height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.4s ease;
+  border-radius: 16px;
+}
+.mem-card.flipped .mem-card-inner  { transform: rotateY(180deg); }
+.mem-card.matched .mem-card-inner  { transform: rotateY(180deg); }
+.mem-card-front, .mem-card-back {
+  position: absolute; inset: 0;
+  border-radius: 16px;
+  display: flex; align-items: center; justify-content: center;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  font-size: clamp(1.4rem, 7vw, 2.8rem);
+}
+.mem-card-front {
+  background: linear-gradient(135deg, #ce93d8, #ab47bc);
+  color: white;
+  box-shadow: 0 4px 12px rgba(171,71,188,0.3);
+}
+.mem-card-back {
+  background: white;
+  transform: rotateY(180deg);
+  border: 3px solid #e1bee7;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.mem-card.matched .mem-card-front {
+  background: linear-gradient(135deg, #a5d6a7, #66bb6a);
+}
+.mem-card.matched .mem-card-back {
+  border-color: #a5d6a7;
+  background: #f1f8e9;
+}
+.mem-card:active { transform: scale(0.92); }
+.bubble {
+  position: absolute;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.8em;
+  box-shadow: inset -4px -4px 12px rgba(255,255,255,0.6), 0 4px 16px rgba(0,0,0,0.12);
+  pointer-events: auto;
+  z-index: 10;
+  animation: bubble-float linear 1 forwards;
+}
+@keyframes bubble-float {
+  0%   { top: 110%; }
+  100% { top: -20%; }
+}
+.bubble.pop {
+  animation: pop-anim 0.25s ease-out forwards !important;
+}
+@keyframes pop-anim {
+  0%  { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.6); opacity: 0.6; }
+  100%{ transform: scale(0);   opacity: 0; }
+}
+
+/* ========== EFFECTS ========== */
+#effects-layer {
+  position:fixed; inset:0; pointer-events:none; z-index:500;
+}
+.burst {
+  position:absolute; border-radius:50%;
+  animation: burst-a 0.6s ease-out forwards;
+}
+@keyframes burst-a {
+  0%  { transform:translate(-50%,-50%) scale(0); opacity:1; }
+  100%{ transform:translate(-50%,-50%) scale(3.5); opacity:0; }
+}
+.star-fx {
+  position:absolute; font-size:26px;
+  animation: star-a 0.85s ease-out forwards;
+}
+@keyframes star-a {
+  0%  { transform:translate(-50%,-50%) scale(0) rotate(0); opacity:1; }
+  100%{ transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(1) rotate(var(--dr)); opacity:0; }
+}
+#big-msg {
+  position:fixed; inset:0;
+  display:flex; align-items:center; justify-content:center;
+  pointer-events:none; z-index:600;
+}
+.msg-txt {
+  font-family:'Kaisei Decol',serif;
+  font-size: clamp(2.5rem, 12vw, 6rem);
+  animation: msg-pop 0.8s ease-out forwards;
+  background: linear-gradient(135deg,#ff6b6b,#ffd93d,#6bcb77,#4d96ff);
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  background-clip:text;
+  filter: drop-shadow(0 3px 8px rgba(0,0,0,0.25));
+}
+@keyframes msg-pop {
+  0%  { transform:scale(0) rotate(-10deg); opacity:0; }
+  60% { transform:scale(1.2) rotate(5deg); opacity:1; }
+  80% { transform:scale(0.95) rotate(-2deg); }
+  100%{ transform:scale(1) rotate(0); opacity:1; }
+}
+#wrong-flash {
+  position:fixed; inset:0;
+  background:rgba(255,50,50,0.28);
+  pointer-events:none; z-index:700; opacity:0;
+  transition: opacity 0.15s;
+}
+.wrong-shake { animation: shake 0.4s ease-out !important; }
+@keyframes shake {
+  0%,100%{ transform:translateX(0) rotate(-2deg); }
+  25%    { transform:translateX(-12px) rotate(-5deg); }
+  75%    { transform:translateX(12px) rotate(5deg); }
+}
+</style>
+</head>
+<body>
+
+<!-- ===== MENU ===== -->
+<div id="menu" class="screen active">
+  <div id="menu-title">
+    <span class="sub">✨ みちるちゃんの ✨</span>
+    <h1>ゲームランド！</h1>
+  </div>
+  <div class="game-cards">
+    <div class="game-card floating" data-game="animal" onclick="launchGame('animal')" style="animation-delay:0s">
+      <div class="card-emoji">🐱</div>
+      <div class="card-title">どうぶつタッチ</div>
+      <div class="card-desc">よばれた<br>どうぶつを<br>タッチしよう！</div>
+    </div>
+    <div class="game-card floating" data-game="color" onclick="launchGame('color')" style="animation-delay:0.2s">
+      <div class="card-emoji">🎨</div>
+      <div class="card-title">いろタッチ</div>
+      <div class="card-desc">おなじいろを<br>さがして<br>タッチしよう！</div>
+    </div>
+    <div class="game-card floating" data-game="count" onclick="launchGame('count')" style="animation-delay:0.4s">
+      <div class="card-emoji">🔢</div>
+      <div class="card-title">かずあわせ</div>
+      <div class="card-desc">いくつあるか<br>かぞえて<br>えらぼう！</div>
+    </div>
+    <div class="game-card floating" data-game="bubble" onclick="launchGame('bubble')" style="animation-delay:0.6s">
+      <div class="card-emoji">🫧</div>
+      <div class="card-title">シャボンわり</div>
+      <div class="card-desc">シャボンだまを<br>どんどん<br>わろう！</div>
+    </div>
+    <div class="game-card floating" data-game="hiragana" onclick="launchGame('hiragana')" style="animation-delay:0.8s">
+      <div class="card-emoji">あ</div>
+      <div class="card-title">ひらがな</div>
+      <div class="card-desc">ひらがなを<br>さがして<br>タッチ！</div>
+    </div>
+    <div class="game-card floating" data-game="katakana" onclick="launchGame('katakana')" style="animation-delay:1.0s">
+      <div class="card-emoji">ア</div>
+      <div class="card-title">カタカナ</div>
+      <div class="card-desc">カタカナを<br>さがして<br>タッチ！</div>
+    </div>
+    <div class="game-card floating" data-game="alphabet" onclick="launchGame('alphabet')" style="animation-delay:1.2s">
+      <div class="card-emoji">A</div>
+      <div class="card-title">アルファベット</div>
+      <div class="card-desc">よばれた文字を<br>さがして<br>タッチ！</div>
+    </div>
+    <div class="game-card floating" data-game="memory" onclick="launchGame('memory')" style="animation-delay:1.4s;grid-column:span 2;max-width:300px;margin:0 auto;width:100%">
+      <div class="card-emoji">🪞</div>
+      <div class="card-title">おなじえをさがせ</div>
+      <div class="card-desc">カードをめくって<br>おなじえを<br>みつけよう！</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== GAME SCREEN ===== -->
+<div id="game-screen" class="screen" style="flex-direction:column;">
+  <div id="top-bar">
+    <button id="back-btn" onclick="goMenu()">◀ もどる</button>
+    <div id="game-score">⭐ 0</div>
+    <div id="game-level">レベル 1</div>
+  </div>
+  <div id="target-bar">
+    <div id="target-label">よみこみちゅう…</div>
+  </div>
+  <div id="play-area"></div>
+</div>
+
+<!-- ===== EFFECTS ===== -->
+<div id="effects-layer"></div>
+<div id="big-msg"></div>
+<div id="wrong-flash"></div>
+
+<script>
+// ========== AUDIO ==========
+let audioCtx = null;
+function ac() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+function tone(freq, type, t0, dur, vol, ctx, freqEnd) {
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.connect(g); g.connect(ctx.destination);
+  o.type = type;
+  o.frequency.setValueAtTime(freq, t0);
+  if (freqEnd) o.frequency.exponentialRampToValueAtTime(freqEnd, t0 + dur);
+  g.gain.setValueAtTime(vol, t0);
+  g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+  o.start(t0); o.stop(t0 + dur);
+}
+function noise(t0, dur, vol, ctx) {
+  const buf = ctx.createBuffer(1, ctx.sampleRate * dur, ctx.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  const g = ctx.createGain();
+  src.connect(g); g.connect(ctx.destination);
+  g.gain.setValueAtTime(vol, t0);
+  g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+  src.start(t0); src.stop(t0 + dur);
+}
+
+// メニュー起動音：かわいいジングル
+function playStart() {
+  const ctx = ac(), t = ctx.currentTime;
+  [330,392,494,659,784].forEach((f,i) => tone(f,'sine',t+i*0.1,0.2,0.3,ctx));
+}
+
+// レベルアップ（共通）：派手なファンファーレ
+function playLevelUp() {
+  const ctx = ac(), t = ctx.currentTime;
+  [[523,659,784],[659,831,988],[784,988,1175],[1047,1319,1568]].forEach((ch,ci) =>
+    ch.forEach(f => tone(f,'sine',t+ci*0.15,0.28,0.22,ctx)));
+  tone(2093,'triangle',t+0.6,0.3,0.15,ctx);
+}
+
+// ===== どうぶつタッチ の音 =====
+// タップ：動物っぽいポコッ
+function playAnimalTap() {
+  const ctx = ac(), t = ctx.currentTime;
+  tone(400,'sine',t,0.06,0.25,ctx,320);
+  tone(800,'triangle',t,0.05,0.1,ctx);
+}
+// 正解：元気なファンファーレ ♪
+function playAnimalCorrect() {
+  const ctx = ac(), t = ctx.currentTime;
+  [523,659,784,1047].forEach((f,i) => tone(f,'sine',t+i*0.09,0.22,0.38,ctx));
+  tone(1568,'triangle',t+0.35,0.18,0.15,ctx);
+  tone(2093,'triangle',t+0.45,0.15,0.12,ctx);
+}
+// 不正解：ブルブル低音
+function playAnimalWrong() {
+  const ctx = ac(), t = ctx.currentTime;
+  tone(180,'sawtooth',t,0.12,0.25,ctx,120);
+  tone(160,'sawtooth',t+0.1,0.12,0.2,ctx,100);
+  noise(t, 0.2, 0.05, ctx);
+}
+
+// ===== いろタッチ の音 =====
+// タップ：シュワッとした高音
+function playColorTap() {
+  const ctx = ac(), t = ctx.currentTime;
+  tone(1200,'sine',t,0.07,0.18,ctx,900);
+  tone(1600,'triangle',t,0.05,0.08,ctx);
+}
+// 正解：キラキラ虹色音階
+function playColorCorrect() {
+  const ctx = ac(), t = ctx.currentTime;
+  [659,784,988,1175,1319,1568].forEach((f,i) =>
+    tone(f,'triangle',t+i*0.07,0.2,0.2,ctx));
+  tone(2093,'sine',t+0.42,0.25,0.15,ctx);
+}
+// 不正解：しょぼーん下降音
+function playColorWrong() {
+  const ctx = ac(), t = ctx.currentTime;
+  tone(440,'sine',t,0.3,0.25,ctx,220);
+  tone(330,'triangle',t+0.1,0.2,0.12,ctx,165);
+}
+
+// ===== かずあわせ の音 =====
+// タップ：カチッとした木琴風
+function playCountTap() {
+  const ctx = ac(), t = ctx.currentTime;
+  tone(880,'triangle',t,0.1,0.3,ctx);
+  tone(1100,'triangle',t+0.04,0.08,0.1,ctx);
+}
+// 正解：ドン・ドン・ジャーン！
+function playCountCorrect() {
+  const ctx = ac(), t = ctx.currentTime;
+  tone(261,'sine',t,0.15,0.4,ctx);
+  tone(329,'sine',t+0.15,0.15,0.4,ctx);
+  tone(392,'sine',t+0.3,0.15,0.4,ctx);
+  tone(523,'sine',t+0.45,0.4,0.4,ctx);
+  [523,659,784].forEach(f => tone(f,'sine',t+0.45,0.4,0.2,ctx));
+}
+// 不正解：ブザー音
+function playCountWrong() {
+  const ctx = ac(), t = ctx.currentTime;
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.connect(g); g.connect(ctx.destination);
+  o.type = 'square';
+  o.frequency.setValueAtTime(200, t);
+  o.frequency.setValueAtTime(150, t+0.1);
+  o.frequency.setValueAtTime(200, t+0.2);
+  g.gain.setValueAtTime(0.2, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t+0.35);
+  o.start(t); o.stop(t+0.35);
+}
+
+// ===== シャボンわり の音 =====
+// 割れる：プシュッ！という泡音
+function playBubblePop() {
+  const ctx = ac(), t = ctx.currentTime;
+  // ノイズバースト
+  noise(t, 0.08, 0.4, ctx);
+  // 高音の抜け感
+  tone(1800,'sine',t,0.06,0.3,ctx,400);
+  tone(2400,'sine',t,0.04,0.2,ctx,600);
+}
+
+// ========== STATE ==========
+let currentGame = null;
+let score = 0, level = 1, correctCount = 0;
+let target = null;
+let gameItems = [];
+let bubbleInterval = null;
+let bubbleCount = 0;
+let bubbleTarget = 0;
+let areaW = 0, areaH = 0;
+
+function goMenu() {
+  stopGame();
+  document.getElementById('game-screen').classList.remove('active');
+  document.getElementById('menu').classList.add('active');
+}
+
+function launchGame(name) {
+  document.getElementById('menu').classList.remove('active');
+  document.getElementById('game-screen').classList.add('active');
+  score = 0; level = 1; correctCount = 0;
+  updateHUD();
+  playStart();
+  currentGame = name;
+  startGame(name);
+}
+
+function startGame(name) {
+  stopGame();
+  refreshArea();
+  if (name === 'animal') initAnimal();
+  else if (name === 'color') initColor();
+  else if (name === 'count') initCount();
+  else if (name === 'bubble') initBubble();
+  else if (name === 'hiragana') initHiragana();
+  else if (name === 'katakana') initKatakana();
+  else if (name === 'alphabet') initAlphabet();
+  else if (name === 'memory') initMemory();
+}
+
+function stopGame() {
+  if (bubbleInterval) { clearInterval(bubbleInterval); bubbleInterval = null; }
+  refreshArea();
+}
+
+function refreshArea() {
+  const a = document.getElementById('play-area');
+  a.innerHTML = '';
+  gameItems = [];
+  const r = a.getBoundingClientRect();
+  areaW = r.width; areaH = r.height;
+}
+
+function updateHUD() {
+  document.getElementById('game-score').textContent = '⭐ ' + score;
+  document.getElementById('game-level').textContent = 'レベル ' + level;
+}
+
+function checkLevelUp() {
+  correctCount++;
+  if (correctCount >= 7) {
+    correctCount = 0;
+    level++;
+    updateHUD();
+    setTimeout(() => { showMsg('レベルアップ！🎉'); playLevelUp(); }, 900);
+  }
+}
+
+// ========== EFFECTS ==========
+function fx(cx, cy) {
+  const el = document.getElementById('effects-layer');
+  const colors = ['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#ff9ff3'];
+  const b = document.createElement('div');
+  b.className = 'burst';
+  b.style.cssText = `left:${cx}px;top:${cy}px;width:60px;height:60px;background:${colors[Math.random()*colors.length|0]}`;
+  el.appendChild(b);
+  setTimeout(() => b.remove(), 700);
+
+  const emojis = ['⭐','✨','🌟','💫','🎉'];
+  for (let i = 0; i < 8; i++) {
+    const s = document.createElement('div');
+    s.className = 'star-fx';
+    s.textContent = emojis[Math.random()*emojis.length|0];
+    const a = (i/8)*Math.PI*2, d = 60+Math.random()*60;
+    s.style.cssText = `left:${cx}px;top:${cy}px;--dx:${Math.cos(a)*d}px;--dy:${Math.sin(a)*d}px;--dr:${Math.random()*360-180}deg;animation-delay:${Math.random()*0.2}s`;
+    el.appendChild(s);
+    setTimeout(() => s.remove(), 1000);
+  }
+}
+
+function showMsg(txt) {
+  const area = document.getElementById('big-msg');
+  area.innerHTML = '';
+  const d = document.createElement('div');
+  d.className = 'msg-txt'; d.textContent = txt;
+  area.appendChild(d);
+  setTimeout(() => area.innerHTML = '', 900);
+}
+
+function wrongFx(el) {
+  el.classList.add('wrong-shake');
+  el.addEventListener('animationend', () => el.classList.remove('wrong-shake'), {once:true});
+  const f = document.getElementById('wrong-flash');
+  f.style.opacity = '1'; setTimeout(() => f.style.opacity = '0', 200);
+}
+
+function onCorrect(cx, cy, soundFn) {
+  score++; updateHUD();
+  fx(cx, cy);
+  if (soundFn) soundFn();
+  const msgs = ['やったー！','すごい！','せいかい！','えらい！','ナイス！','かんぺき！'];
+  showMsg(msgs[Math.random()*msgs.length|0]);
+  checkLevelUp();
+}
+
+// ========== POSITIONS ==========
+function genPositions(count, size, margin) {
+  const positions = [], maxX = areaW-size-margin, maxY = areaH-size-margin;
+  let tries = 0;
+  while (positions.length < count && tries < 600) {
+    const x = margin + Math.random()*(maxX-margin);
+    const y = margin + Math.random()*(maxY-margin);
+    if (!positions.some(p => Math.abs(p.x-x)<size+margin && Math.abs(p.y-y)<size+margin))
+      positions.push({x,y});
+    tries++;
+  }
+  while (positions.length < count) {
+    const i = positions.length;
+    positions.push({x: margin+(i%3)*(size+margin+8), y: margin+(i/3|0)*(size+margin+8)});
+  }
+  return positions;
+}
+
+// ========================================
+// GAME 1: ANIMAL
+// ========================================
+const ANIMALS = [
+  {emoji:'🐱',name:'ねこ',color:'#ffecb3'},
+  {emoji:'🐶',name:'いぬ',color:'#ffe0b2'},
+  {emoji:'🐸',name:'かえる',color:'#c8e6c9'},
+  {emoji:'🐼',name:'パンダ',color:'#f5f5f5'},
+  {emoji:'🦊',name:'きつね',color:'#ffe0b2'},
+  {emoji:'🐨',name:'コアラ',color:'#e1bee7'},
+  {emoji:'🐯',name:'とら',color:'#fff9c4'},
+  {emoji:'🦋',name:'ちょうちょ',color:'#e3f2fd'},
+  {emoji:'🐰',name:'うさぎ',color:'#fce4ec'},
+  {emoji:'🐮',name:'うし',color:'#e8f5e9'},
+  {emoji:'🐧',name:'ペンギン',color:'#e3f2fd'},
+  {emoji:'🦁',name:'ライオン',color:'#fff8e1'},
+];
+
+function initAnimal() {
+  refreshArea();
+  const count = level<=2?3:level<=4?4:level<=6?5:6;
+  const pool = [...ANIMALS].sort(()=>Math.random()-0.5).slice(0,count);
+  target = pool[Math.random()*pool.length|0];
+  document.getElementById('target-label').textContent = `${target.emoji} ${target.name} をタッチ！`;
+
+  const size = Math.min(130, Math.max(80, areaW*0.18));
+  const pos = genPositions(count, size, 12);
+  const area = document.getElementById('play-area');
+
+  pool.forEach((a, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'animal-btn';
+    btn.style.cssText = `left:${pos[i].x}px;top:${pos[i].y}px;width:${size}px;height:${size}px;font-size:${size*0.42}px;background:${a.color};animation-delay:${i*0.3}s`;
+    btn.innerHTML = `<span>${a.emoji}</span><span class="lbl">${a.name}</span>`;
+    const tap = (e) => {
+      e.preventDefault();
+      playAnimalTap();
+      const r = btn.getBoundingClientRect();
+      const cx = r.left+r.width/2, cy = r.top+r.height/2;
+      if (a.emoji === target.emoji) {
+        onCorrect(cx, cy, playAnimalCorrect);
+        setTimeout(() => { if(currentGame==='animal') initAnimal(); }, 1000);
+      } else {
+        wrongFx(btn); playAnimalWrong();
+      }
+    };
+    btn.addEventListener('click', tap);
+    btn.addEventListener('touchstart', tap, {passive:false});
+    area.appendChild(btn);
+  });
+}
+
+// ========================================
+// GAME 2: COLOR
+// ========================================
+const COLORS = [
+  {name:'あか',   hex:'#ef5350', emoji:'🔴'},
+  {name:'あお',   hex:'#42a5f5', emoji:'🔵'},
+  {name:'きいろ', hex:'#ffee58', emoji:'🟡'},
+  {name:'みどり', hex:'#66bb6a', emoji:'🟢'},
+  {name:'ピンク', hex:'#f48fb1', emoji:'🩷'},
+  {name:'むらさき',hex:'#ab47bc', emoji:'🟣'},
+  {name:'オレンジ',hex:'#ffa726', emoji:'🟠'},
+  {name:'しろ',   hex:'#f5f5f5', emoji:'⬜'},
+];
+
+function initColor() {
+  refreshArea();
+  const count = level<=2?3:level<=4?4:6;
+  const pool = [...COLORS].sort(()=>Math.random()-0.5).slice(0,count);
+  target = pool[Math.random()*pool.length|0];
+  document.getElementById('target-label').textContent = `${target.emoji} ${target.name} をタッチ！`;
+
+  const area = document.getElementById('play-area');
+  const wrapper = document.createElement('div');
+  wrapper.id = 'color-game-area';
+
+  const grid = document.createElement('div');
+  grid.className = 'color-grid';
+  grid.style.gridTemplateColumns = `repeat(${count<=4?2:3}, 1fr)`;
+
+  pool.forEach((c, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'color-btn';
+    btn.style.cssText = `background:${c.hex};animation-delay:${i*0.2}s;${c.name==='しろ'?'color:#999;text-shadow:none;border:3px solid #ddd;':''}`;
+    btn.textContent = c.name;
+    const tap = (e) => {
+      e.preventDefault();
+      playColorTap();
+      const r = btn.getBoundingClientRect();
+      const cx = r.left+r.width/2, cy = r.top+r.height/2;
+      if (c.name === target.name) {
+        onCorrect(cx, cy, playColorCorrect);
+        setTimeout(() => { if(currentGame==='color') initColor(); }, 1000);
+      } else {
+        wrongFx(btn); playColorWrong();
+      }
+    };
+    btn.addEventListener('click', tap);
+    btn.addEventListener('touchstart', tap, {passive:false});
+    grid.appendChild(btn);
+  });
+
+  wrapper.appendChild(grid);
+  area.appendChild(wrapper);
+}
+
+// ========================================
+// GAME 3: COUNT
+// ========================================
+const COUNT_EMOJIS = ['🍎','🍊','🍋','🍇','🍓','⭐','🌸','🐾','🎈','🦄','🌈','🍭'];
+
+function initCount() {
+  refreshArea();
+  const maxNum = level<=1?5:level<=3?8:10;
+  const num = 1 + Math.floor(Math.random() * maxNum);
+  const emoji = COUNT_EMOJIS[Math.floor(Math.random()*COUNT_EMOJIS.length)];
+
+  document.getElementById('target-label').textContent = `いくつある？ えらんでね！`;
+
+  const area = document.getElementById('play-area');
+  const wrapper = document.createElement('div');
+  wrapper.id = 'count-game-area';
+
+  const display = document.createElement('div');
+  display.className = 'count-emoji-area';
+  display.textContent = emoji.repeat(num);
+  wrapper.appendChild(display);
+
+  // wrong choices
+  const choices = new Set([num]);
+  while (choices.size < 3) {
+    let c = num + Math.floor(Math.random()*5) - 2;
+    if (c >= 1 && c !== num) choices.add(c);
+  }
+  const choiceArr = [...choices].sort(() => Math.random()-0.5);
+
+  const grid = document.createElement('div');
+  grid.className = 'count-choices';
+  choiceArr.forEach(n => {
+    const btn = document.createElement('button');
+    btn.className = 'count-btn';
+    btn.textContent = n;
+    const tap = (e) => {
+      e.preventDefault();
+      playCountTap();
+      const r = btn.getBoundingClientRect();
+      const cx = r.left+r.width/2, cy = r.top+r.height/2;
+      if (n === num) {
+        onCorrect(cx, cy, playCountCorrect);
+        setTimeout(() => { if(currentGame==='count') initCount(); }, 1000);
+      } else {
+        wrongFx(btn); playCountWrong();
+      }
+    };
+    btn.addEventListener('click', tap);
+    btn.addEventListener('touchstart', tap, {passive:false});
+    grid.appendChild(btn);
+  });
+  wrapper.appendChild(grid);
+  area.appendChild(wrapper);
+}
+
+// ========================================
+// GAME 4: BUBBLE
+// ========================================
+const BUBBLE_COLORS = [
+  {bg:'rgba(255,120,120,0.5)',border:'rgba(255,80,80,0.8)'},
+  {bg:'rgba(120,180,255,0.5)',border:'rgba(80,140,255,0.8)'},
+  {bg:'rgba(120,230,160,0.5)',border:'rgba(60,200,100,0.8)'},
+  {bg:'rgba(255,200,80,0.5)', border:'rgba(255,160,40,0.8)'},
+  {bg:'rgba(200,130,255,0.5)',border:'rgba(160,80,255,0.8)'},
+  {bg:'rgba(255,160,200,0.5)',border:'rgba(255,100,160,0.8)'},
+];
+
+function initBubble() {
+  refreshArea();
+  bubbleCount = 0;
+  bubbleTarget = 10 + level * 5;
+  document.getElementById('target-label').textContent = `シャボンだまを わろう！ 🫧`;
+
+  spawnBubble();
+  spawnBubble();
+  spawnBubble();
+  bubbleInterval = setInterval(() => {
+    const area = document.getElementById('play-area');
+    if (area && area.querySelectorAll('.bubble').length < 8) spawnBubble();
+  }, 1200);
+}
+
+function spawnBubble() {
+  if (currentGame !== 'bubble') return;
+  const area = document.getElementById('play-area');
+  if (!area) return;
+
+  const size = 60 + Math.random() * 60;
+  const c = BUBBLE_COLORS[Math.floor(Math.random()*BUBBLE_COLORS.length)];
+  const emojis = ['🫧','💧','✨','🌈','⭐'];
+  const emoji = emojis[Math.floor(Math.random()*emojis.length)];
+
+  const b = document.createElement('div');
+  b.className = 'bubble';
+  const x = Math.random() * (areaW - size);
+  const dur = 4 + Math.random() * 4;
+  b.style.left = x + 'px';
+  b.style.width = size + 'px';
+  b.style.height = size + 'px';
+  b.style.background = c.bg;
+  b.style.border = '3px solid ' + c.border;
+  b.style.fontSize = (size * 0.4) + 'px';
+  b.style.animationDuration = dur + 's';
+  b.textContent = emoji;
+
+  let popped = false;
+  const pop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (popped) return;
+    popped = true;
+    b.classList.add('pop');
+    const r = b.getBoundingClientRect();
+    playBubblePop();
+    fx(r.left + r.width / 2, r.top + r.height / 2);
+    bubbleCount++;
+    score++; updateHUD();
+    checkLevelUp();
+    setTimeout(() => b.remove(), 300);
+    if (bubbleCount % 5 === 0) {
+      const msgs = ['すごい！','どんどんわれ！','がんばれ！','いいぞ！'];
+      showMsg(msgs[Math.floor(Math.random()*msgs.length)]);
+    }
+  };
+  b.addEventListener('pointerdown', pop);
+  b.addEventListener('animationend', () => { if (!popped) b.remove(); });
+  area.appendChild(b);
+}
+
+// ===== ひらがなあてっこ の音 =====
+function playHiraganaTap() {
+  const ctx = ac(), t = ctx.currentTime;
+  tone(1047,'triangle',t,0.07,0.22,ctx,880);
+  tone(1319,'sine',t+0.03,0.05,0.1,ctx);
+}
+function playHiraganaCorrect() {
+  const ctx = ac(), t = ctx.currentTime;
+  // かわいいベル音階
+  [1047,1319,1568,2093,1568,2093].forEach((f,i) =>
+    tone(f,'triangle',t+i*0.08,0.18,0.28,ctx));
+  tone(2637,'sine',t+0.5,0.25,0.2,ctx);
+}
+function playHiraganaWrong() {
+  const ctx = ac(), t = ctx.currentTime;
+  tone(350,'triangle',t,0.1,0.2,ctx,280);
+  tone(280,'sine',t+0.12,0.15,0.15,ctx,220);
+}
+
+// ========================================
+// GAME 5: HIRAGANA
+// ========================================
+// 5文字ずつレベルアップで追加
+const HIRAGANA_LEVELS = [
+  ['あ','い','う','え','お'],          // レベル1
+  ['か','き','く','け','こ'],          // レベル2
+  ['さ','し','す','せ','そ'],          // レベル3
+  ['た','ち','つ','て','と'],          // レベル4
+  ['な','に','ぬ','ね','の'],          // レベル5
+  ['は','ひ','ふ','へ','ほ'],          // レベル6
+  ['ま','み','む','め','も'],          // レベル7
+  ['や','ゆ','よ','ら','り'],          // レベル8
+  ['る','れ','ろ','わ','を','ん'],     // レベル9
+];
+
+function getHiraganaPool() {
+  const rows = Math.min(level, HIRAGANA_LEVELS.length);
+  let pool = [];
+  for (let i = 0; i < rows; i++) pool = pool.concat(HIRAGANA_LEVELS[i]);
+  return pool;
+}
+
+function initHiragana() {
+  refreshArea();
+  const pool = getHiraganaPool();
+  // 常に3択：正解1つ＋不正解2つ
+  const shuffled = [...pool].sort(() => Math.random() - 0.5).slice(0, 3);
+  const targetChar = shuffled[Math.floor(Math.random() * shuffled.length)];
+
+  document.getElementById('target-label').textContent = `「 ${targetChar} 」をタッチ！`;
+
+  const area = document.getElementById('play-area');
+  const wrapper = document.createElement('div');
+  wrapper.id = 'hiragana-game-area';
+
+  const disp = document.createElement('div');
+  disp.className = 'hiragana-display';
+  disp.textContent = targetChar;
+  wrapper.appendChild(disp);
+
+  const grid = document.createElement('div');
+  grid.className = 'hiragana-grid';
+  grid.style.gridTemplateColumns = 'repeat(3, 1fr)';
+
+  shuffled.forEach((ch, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'hiragana-btn';
+    btn.textContent = ch;
+    btn.style.animationDelay = (i * 0.15) + 's';
+    const tap = (e) => {
+      e.preventDefault();
+      playHiraganaTap();
+      const r = btn.getBoundingClientRect();
+      const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      if (ch === targetChar) {
+        onCorrect(cx, cy, playHiraganaCorrect);
+        setTimeout(() => { if (currentGame === 'hiragana') initHiragana(); }, 1000);
+      } else {
+        wrongFx(btn); playHiraganaWrong();
+      }
+    };
+    btn.addEventListener('click', tap);
+    btn.addEventListener('touchstart', tap, { passive: false });
+    grid.appendChild(btn);
+  });
+
+  wrapper.appendChild(grid);
+  area.appendChild(wrapper);
+}
+
+// ===== カタカナあてっこ の音 =====
+function playKatakanaTap() {
+  const ctx = ac(), t = ctx.currentTime;
+  tone(740,'square',t,0.06,0.15,ctx,620);
+  tone(988,'triangle',t+0.02,0.05,0.08,ctx);
+}
+function playKatakanaCorrect() {
+  const ctx = ac(), t = ctx.currentTime;
+  // 和太鼓風リズム＋上昇音
+  [130,196,261,392,523,784].forEach((f,i) =>
+    tone(f,'square',t+i*0.07,0.12,0.2,ctx));
+  [523,659,784,1047].forEach((f,i) =>
+    tone(f,'triangle',t+0.3+i*0.08,0.2,0.18,ctx));
+}
+function playKatakanaWrong() {
+  const ctx = ac(), t = ctx.currentTime;
+  tone(233,'square',t,0.08,0.2,ctx,175);
+  tone(196,'sawtooth',t+0.1,0.1,0.15,ctx,147);
+  noise(t+0.05, 0.1, 0.06, ctx);
+}
+
+// ===== アルファベットあてっこ の音 =====
+function playAlphabetTap() {
+  const ctx = ac(), t = ctx.currentTime;
+  tone(660,'sine',t,0.06,0.2,ctx);
+  tone(990,'sine',t+0.03,0.04,0.08,ctx);
+}
+function playAlphabetCorrect() {
+  const ctx = ac(), t = ctx.currentTime;
+  // ジャズっぽいコード
+  [[330,415,494],[370,466,554],[415,523,622],[494,622,740]].forEach((ch,ci) =>
+    ch.forEach(f => tone(f,'triangle',t+ci*0.13,0.25,0.2,ctx)));
+  tone(988,'sine',t+0.55,0.3,0.18,ctx);
+}
+function playAlphabetWrong() {
+  const ctx = ac(), t = ctx.currentTime;
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.connect(g); g.connect(ctx.destination);
+  o.type = 'triangle';
+  o.frequency.setValueAtTime(330,t);
+  o.frequency.linearRampToValueAtTime(220,t+0.25);
+  g.gain.setValueAtTime(0.2,t);
+  g.gain.exponentialRampToValueAtTime(0.001,t+0.3);
+  o.start(t); o.stop(t+0.3);
+}
+
+// ========================================
+// GAME 6: KATAKANA
+// ========================================
+const KATAKANA_LEVELS = [
+  ['ア','イ','ウ','エ','オ'],          // レベル1
+  ['カ','キ','ク','ケ','コ'],          // レベル2
+  ['サ','シ','ス','セ','ソ'],          // レベル3
+  ['タ','チ','ツ','テ','ト'],          // レベル4
+  ['ナ','ニ','ヌ','ネ','ノ'],          // レベル5
+  ['ハ','ヒ','フ','ヘ','ホ'],          // レベル6
+  ['マ','ミ','ム','メ','モ'],          // レベル7
+  ['ヤ','ユ','ヨ','ラ','リ'],          // レベル8
+  ['ル','レ','ロ','ワ','ヲ','ン'],     // レベル9
+];
+
+function getKatakanaPool() {
+  const rows = Math.min(level, KATAKANA_LEVELS.length);
+  let pool = [];
+  for (let i = 0; i < rows; i++) pool = pool.concat(KATAKANA_LEVELS[i]);
+  return pool;
+}
+
+function initKatakana() {
+  refreshArea();
+  const pool = getKatakanaPool();
+  // 常に3択
+  const shuffled = [...pool].sort(() => Math.random() - 0.5).slice(0, 3);
+  const targetChar = shuffled[Math.floor(Math.random() * shuffled.length)];
+
+  document.getElementById('target-label').textContent = `「 ${targetChar} 」をタッチ！`;
+
+  const area = document.getElementById('play-area');
+  const wrapper = document.createElement('div');
+  wrapper.id = 'katakana-game-area';
+
+  const disp = document.createElement('div');
+  disp.className = 'katakana-display';
+  disp.textContent = targetChar;
+  wrapper.appendChild(disp);
+
+  const grid = document.createElement('div');
+  grid.className = 'katakana-grid';
+  grid.style.gridTemplateColumns = 'repeat(3, 1fr)';
+
+  shuffled.forEach((ch, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'katakana-btn';
+    btn.textContent = ch;
+    btn.style.animationDelay = (i * 0.15) + 's';
+    const tap = (e) => {
+      e.preventDefault();
+      playKatakanaTap();
+      const r = btn.getBoundingClientRect();
+      const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      if (ch === targetChar) {
+        onCorrect(cx, cy, playKatakanaCorrect);
+        setTimeout(() => { if (currentGame === 'katakana') initKatakana(); }, 1000);
+      } else {
+        wrongFx(btn); playKatakanaWrong();
+      }
+    };
+    btn.addEventListener('click', tap);
+    btn.addEventListener('touchstart', tap, { passive: false });
+    grid.appendChild(btn);
+  });
+
+  wrapper.appendChild(grid);
+  area.appendChild(wrapper);
+}
+
+// ========================================
+// GAME 7: ALPHABET
+// ========================================
+const ALPHABET_LEVELS = [
+  ['A','B','C','D','E'],
+  ['F','G','H','I','J','K','L','M'],
+  ['N','O','P','Q','R','S','T'],
+  ['U','V','W','X','Y','Z'],
+];
+
+// 小文字も混ぜる（レベル4以上）
+const ALPHABET_LOWER = ['a','b','c','d','e','f','g','h','i','j','k','l','m',
+                         'n','o','p','q','r','s','t','u','v','w','x','y','z'];
+
+function getAlphabetPool() {
+  if (level >= 5) return ALPHABET_LOWER;
+  const rows = Math.min(level, ALPHABET_LEVELS.length);
+  let pool = [];
+  for (let i = 0; i < rows; i++) pool = pool.concat(ALPHABET_LEVELS[i]);
+  return pool;
+}
+
+function initAlphabet() {
+  refreshArea();
+  const pool = getAlphabetPool();
+  const count = level <= 1 ? 3 : level <= 3 ? 4 : 6;
+  const shuffled = [...pool].sort(() => Math.random() - 0.5).slice(0, count);
+  const targetChar = shuffled[Math.floor(Math.random() * shuffled.length)];
+  const isLower = level >= 5;
+
+  document.getElementById('target-label').textContent =
+    `「 ${targetChar} 」をタッチ！` + (isLower ? '（こもじ）' : '');
+
+  const area = document.getElementById('play-area');
+  const wrapper = document.createElement('div');
+  wrapper.id = 'alphabet-game-area';
+
+  const disp = document.createElement('div');
+  disp.className = 'alphabet-display';
+  disp.textContent = targetChar;
+  wrapper.appendChild(disp);
+
+  const cols = count <= 3 ? 3 : count <= 4 ? 4 : 3;
+  const grid = document.createElement('div');
+  grid.className = 'alphabet-grid';
+  grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+
+  shuffled.forEach((ch, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'alphabet-btn';
+    btn.textContent = ch;
+    btn.style.animationDelay = (i * 0.15) + 's';
+    const tap = (e) => {
+      e.preventDefault();
+      playAlphabetTap();
+      const r = btn.getBoundingClientRect();
+      const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      if (ch === targetChar) {
+        onCorrect(cx, cy, playAlphabetCorrect);
+        setTimeout(() => { if (currentGame === 'alphabet') initAlphabet(); }, 1000);
+      } else {
+        wrongFx(btn); playAlphabetWrong();
+      }
+    };
+    btn.addEventListener('click', tap);
+    btn.addEventListener('touchstart', tap, { passive: false });
+    grid.appendChild(btn);
+  });
+
+  wrapper.appendChild(grid);
+  area.appendChild(wrapper);
+}
+
+window.addEventListener('resize', () => {
+  if (currentGame && currentGame !== 'bubble') startGame(currentGame);
+});
+
+// ===== おなじえをさがせ の音 =====
+function playMemoryFlip() {
+  const ctx = ac(), t = ctx.currentTime;
+  tone(660, 'sine', t, 0.08, 0.18, ctx, 880);
+}
+function playMemoryMatch() {
+  const ctx = ac(), t = ctx.currentTime;
+  [523, 659, 784, 1047].forEach((f, i) =>
+    tone(f, 'triangle', t + i * 0.07, 0.2, 0.25, ctx));
+  tone(1319, 'sine', t + 0.28, 0.2, 0.15, ctx);
+}
+function playMemoryMiss() {
+  const ctx = ac(), t = ctx.currentTime;
+  tone(330, 'sine', t, 0.1, 0.15, ctx, 260);
+}
+function playMemoryClear() {
+  const ctx = ac(), t = ctx.currentTime;
+  [392,494,587,659,784,880,988,1047,1175,1319].forEach((f, i) =>
+    tone(f, 'triangle', t + i * 0.07, 0.25, 0.22, ctx));
+}
+
+// ========================================
+// GAME 8: MEMORY（神経衰弱）
+// ========================================
+const MEMORY_EMOJIS = [
+  '🐱','🐶','🐸','🐼','🦊','🐨','🐯','🦋',
+  '🐰','🐮','🐧','🦁','🍎','🍊','🍋','🍇',
+  '🍓','🌸','🎈','⭐','🌈','🍭','🎀','🚀',
+];
+
+let memCards = [];
+let memFlipped = [];
+let memMatched = 0;
+let memLocked = false;
+let memMoves = 0;
+
+function getMemPairCount() {
+  if (level <= 1) return 3;  // 6枚
+  if (level <= 2) return 4;  // 8枚
+  if (level <= 4) return 6;  // 12枚
+  return 8;                  // 16枚
+}
+
+function initMemory() {
+  refreshArea();
+  memCards = []; memFlipped = []; memMatched = 0; memLocked = false; memMoves = 0;
+
+  const pairs = getMemPairCount();
+  const emojis = [...MEMORY_EMOJIS].sort(() => Math.random() - 0.5).slice(0, pairs);
+  const deck = [...emojis, ...emojis].sort(() => Math.random() - 0.5);
+
+  document.getElementById('target-label').textContent = 'おなじえをさがそう！ 🪞';
+
+  const area = document.getElementById('play-area');
+  const wrapper = document.createElement('div');
+  wrapper.id = 'memory-game-area';
+
+  const info = document.createElement('div');
+  info.className = 'memory-info';
+  info.id = 'memory-info';
+  info.textContent = `${pairs}ペア ・ てがず: 0`;
+  wrapper.appendChild(info);
+
+  // 列数：3ペア(6枚)→3列, 4ペア(8枚)→4列, 6ペア(12枚)→4列, 8ペア(16枚)→4列
+  const cols = pairs <= 3 ? 3 : 4;
+  const rows = Math.ceil(deck.length / cols);
+
+  const grid = document.createElement('div');
+  grid.className = 'memory-grid';
+  grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+  grid.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+
+  deck.forEach((emoji, i) => {
+    const card = document.createElement('button');
+    card.className = 'mem-card';
+    card.dataset.emoji = emoji;
+    card.dataset.index = i;
+    card.innerHTML = `
+      <div class="mem-card-inner">
+        <div class="mem-card-front">？</div>
+        <div class="mem-card-back">${emoji}</div>
+      </div>`;
+    card.addEventListener('pointerdown', () => onMemTap(card));
+    grid.appendChild(card);
+    memCards.push(card);
+  });
+
+  wrapper.appendChild(grid);
+  area.appendChild(wrapper);
+}
+
+function onMemTap(card) {
+  if (memLocked) return;
+  if (card.classList.contains('flipped')) return;
+  if (card.classList.contains('matched')) return;
+
+  playMemoryFlip();
+  card.classList.add('flipped');
+  memFlipped.push(card);
+
+  if (memFlipped.length === 2) {
+    memLocked = true;
+    memMoves++;
+    const info = document.getElementById('memory-info');
+    if (info) info.textContent = `${getMemPairCount()}ペア ・ てがず: ${memMoves}`;
+
+    const [a, b] = memFlipped;
+    if (a.dataset.emoji === b.dataset.emoji) {
+      setTimeout(() => {
+        a.classList.add('matched');
+        b.classList.add('matched');
+        playMemoryMatch();
+        const r = b.getBoundingClientRect();
+        fx(r.left + r.width / 2, r.top + r.height / 2);
+        memMatched++;
+        memFlipped = [];
+        memLocked = false;
+        score++; updateHUD();
+        checkLevelUp();
+        if (memMatched === getMemPairCount()) {
+          setTimeout(() => {
+            playMemoryClear();
+            showMsg('やったー！ぜんぶそろった！🎉');
+            setTimeout(() => { if (currentGame === 'memory') initMemory(); }, 2000);
+          }, 400);
+        }
+      }, 300);
+    } else {
+      setTimeout(() => {
+        playMemoryMiss();
+        a.classList.remove('flipped');
+        b.classList.remove('flipped');
+        memFlipped = [];
+        memLocked = false;
+      }, 900);
+    }
+  }
+}
+
+</script>
+</body>
+</html>
